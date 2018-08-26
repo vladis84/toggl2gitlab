@@ -22,12 +22,35 @@ if (!$startDate && !$endDate) {
     die('Параметры --start-date и --end-date обязательны для заполнения');
 }
 
-require 'gate.php';
-require 'functions.php';
+require 'gates.php';
+
+/**
+ * Ищет issues по id.
+ *
+ * @param int[] $issueIds
+ *
+ * @return array
+ */
+$getGitlabIssues = function (array $issueIds) use ($sendGitlab): array {
+    $url = '/issues?iids[]=' . join('&iids[]=', $issueIds);
+
+    return $sendGitlab($url, 'GET');
+};
+
+/**
+ * Добавляет потраченное время в задачу.
+ *
+ * @param int $issueId
+ * @param int $spent
+ */
+$updateIssueSpent = function (int $issueId, int $spent) use ($sendGitlab) {
+    $url = "/issues/{$issueId}/add_spent_time?duration={$spent}s";
+    $sendGitlab($url, 'POST');
+};
+
 
 $timeSpent = [];
 foreach ($config['toggl']['tokens'] as $token) {
-    $tasks = [];
     $result = $sendToggl($token, $startDate, $endDate);
 
     $data = $result['data'] ?? [];
@@ -42,9 +65,8 @@ foreach ($config['toggl']['tokens'] as $token) {
     }
 }
 
-if (empty($tasks)) {
-    echo "Не найдено задач\n";
-    return;
+if (empty($timeSpent)) {
+    die("Не найдено задач\n");
 }
 
 $issueIds = array_keys($timeSpent);
@@ -55,7 +77,7 @@ foreach ($issues as $issue) {
     echo "Найдена задача #{$issueId} в gitlab\n";
 
     $message = "Задача #{$issueId} не обновлена\n";
-    $spent = $tasks[$issueId] - $issueSpent;
+    $spent = $timeSpent[$issueId] - $issueSpent;
     if ($spent > 0) {
         $updateIssueSpent($issueId, $spent);
         $message = "В задачу #{$issueId} добавлено {$spent} sec\n";
