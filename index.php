@@ -77,7 +77,7 @@ foreach ($issues as $issue) {
     echo "Найдена задача #{$issueId} в gitlab\n";
 
     $message = "Задача #{$issueId} не обновлена\n";
-    $spent = $timeSpent[$issueId] - $issueSpent;
+    $spent = $timeSpent[$issueId];
     if ($spent > 0) {
         $updateIssueSpent($issueId, $spent);
         $message = "В задачу #{$issueId} добавлено {$spent} sec\n";
